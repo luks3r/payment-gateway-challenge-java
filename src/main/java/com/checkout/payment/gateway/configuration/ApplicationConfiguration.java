@@ -2,11 +2,13 @@ package com.checkout.payment.gateway.configuration;
 
 import java.time.Duration;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
+@EnableConfigurationProperties(PaymentConfigurationProperties.class)
 public class ApplicationConfiguration {
 
   @Bean
