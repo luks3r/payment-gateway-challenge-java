@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.checkout.payment.gateway.domain.port.BankClient;
 import com.checkout.payment.gateway.domain.port.PaymentIdGenerator;
+import com.checkout.payment.gateway.exception.BankClientException;
+import com.checkout.payment.gateway.exception.BankUnavailableException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -61,6 +63,106 @@ class PaymentGatewayContractTest {
 
     JsonNode actual = objectMapper.readTree(result.getResponse().getContentAsString());
     JsonNode expected = objectMapper.readTree(readResource("contracts/payment-authorized.json"));
+
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  void declinedPaymentMatchesContract() throws Exception {
+    when(bankClient.authorize(any())).thenReturn(false);
+
+    String payload = "{" +
+        "\"card_number\":\"4000000000000002\"," +
+        "\"expiry_month\":12," +
+        "\"expiry_year\":2035," +
+        "\"currency\":\"USD\"," +
+        "\"amount\":100," +
+        "\"cvv\":\"123\"" +
+        "}";
+
+    MvcResult result = mvc.perform(post("/payments")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    JsonNode actual = objectMapper.readTree(result.getResponse().getContentAsString());
+    JsonNode expected = objectMapper.readTree(readResource("contracts/payment-declined.json"));
+
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  void rejectedPaymentMatchesContract() throws Exception {
+    String payload = "{" +
+        "\"card_number\":\"123\"," +
+        "\"expiry_month\":12," +
+        "\"expiry_year\":2035," +
+        "\"currency\":\"USD\"," +
+        "\"amount\":100," +
+        "\"cvv\":\"123\"" +
+        "}";
+
+    MvcResult result = mvc.perform(post("/payments")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isBadRequest())
+        .andReturn();
+
+    JsonNode actual = objectMapper.readTree(result.getResponse().getContentAsString());
+    JsonNode expected = objectMapper.readTree(readResource("contracts/payment-rejected.json"));
+
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  void bankUnavailableMatchesContract() throws Exception {
+    when(bankClient.authorize(any())).thenThrow(
+        new BankUnavailableException("Bank unavailable", new RuntimeException("down"))
+    );
+
+    String payload = "{" +
+        "\"card_number\":\"4242424242424242\"," +
+        "\"expiry_month\":12," +
+        "\"expiry_year\":2035," +
+        "\"currency\":\"USD\"," +
+        "\"amount\":100," +
+        "\"cvv\":\"123\"" +
+        "}";
+
+    MvcResult result = mvc.perform(post("/payments")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isServiceUnavailable())
+        .andReturn();
+
+    JsonNode actual = objectMapper.readTree(result.getResponse().getContentAsString());
+    JsonNode expected = objectMapper.readTree(readResource("contracts/bank-unavailable.json"));
+
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  void bankErrorMatchesContract() throws Exception {
+    when(bankClient.authorize(any())).thenThrow(new BankClientException("Bank error"));
+
+    String payload = "{" +
+        "\"card_number\":\"4242424242424242\"," +
+        "\"expiry_month\":12," +
+        "\"expiry_year\":2035," +
+        "\"currency\":\"USD\"," +
+        "\"amount\":100," +
+        "\"cvv\":\"123\"" +
+        "}";
+
+    MvcResult result = mvc.perform(post("/payments")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isBadGateway())
+        .andReturn();
+
+    JsonNode actual = objectMapper.readTree(result.getResponse().getContentAsString());
+    JsonNode expected = objectMapper.readTree(readResource("contracts/bank-error.json"));
 
     assertThat(actual).isEqualTo(expected);
   }

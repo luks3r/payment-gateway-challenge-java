@@ -11,6 +11,8 @@ import com.checkout.payment.gateway.domain.port.PaymentIdGenerator;
 import com.checkout.payment.gateway.domain.repository.PaymentsRepository;
 import com.checkout.payment.gateway.domain.rules.SupportedCurrencies;
 import com.checkout.payment.gateway.domain.validation.PaymentRequestValidator;
+import com.checkout.payment.gateway.exception.BankClientException;
+import com.checkout.payment.gateway.exception.BankUnavailableException;
 import com.checkout.payment.gateway.exception.PaymentNotFoundException;
 import com.checkout.payment.gateway.infrastructure.repository.InMemoryPaymentsRepository;
 import java.time.YearMonth;
@@ -134,6 +136,64 @@ class PaymentGatewayServiceTest {
     assertThat(response.id()).isEqualTo(id);
     assertThat(response.status()).isEqualTo(PaymentStatus.AUTHORIZED);
     assertThat(response.cardNumberLastFour()).isEqualTo("4242");
+  }
+
+  @Test
+  void processPaymentPropagatesBankUnavailable() {
+    PaymentsRepository repository = new InMemoryPaymentsRepository();
+    BankClient bankClient = request -> {
+      throw new BankUnavailableException("Bank unavailable", new RuntimeException("down"));
+    };
+    PaymentIdGenerator idGenerator = () -> UUID.randomUUID();
+    SupportedCurrencies supportedCurrencies = new FixedSupportedCurrencies();
+    PaymentRequestValidator validator = new PaymentRequestValidator(supportedCurrencies);
+    PaymentGatewayService service = new PaymentGatewayService(
+        repository,
+        bankClient,
+        idGenerator,
+        validator
+    );
+
+    PaymentRequest request = new PaymentRequest(
+        "4242424242424242",
+        12,
+        YearMonth.now().plusYears(1).getYear(),
+        "USD",
+        100,
+        "123"
+    );
+
+    assertThatThrownBy(() -> service.processPayment(request))
+        .isInstanceOf(BankUnavailableException.class);
+  }
+
+  @Test
+  void processPaymentPropagatesBankClientError() {
+    PaymentsRepository repository = new InMemoryPaymentsRepository();
+    BankClient bankClient = request -> {
+      throw new BankClientException("Bank error");
+    };
+    PaymentIdGenerator idGenerator = () -> UUID.randomUUID();
+    SupportedCurrencies supportedCurrencies = new FixedSupportedCurrencies();
+    PaymentRequestValidator validator = new PaymentRequestValidator(supportedCurrencies);
+    PaymentGatewayService service = new PaymentGatewayService(
+        repository,
+        bankClient,
+        idGenerator,
+        validator
+    );
+
+    PaymentRequest request = new PaymentRequest(
+        "4242424242424242",
+        12,
+        YearMonth.now().plusYears(1).getYear(),
+        "USD",
+        100,
+        "123"
+    );
+
+    assertThatThrownBy(() -> service.processPayment(request))
+        .isInstanceOf(BankClientException.class);
   }
 
   private static class FixedSupportedCurrencies implements SupportedCurrencies {

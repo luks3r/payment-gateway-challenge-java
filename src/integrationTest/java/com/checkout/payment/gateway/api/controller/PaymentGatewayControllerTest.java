@@ -98,22 +98,157 @@ class PaymentGatewayControllerTest {
 
   @Test
   void whenRequestInvalidThenRejectedAndBankNotCalled() throws Exception {
-    String payload = "{" +
-        "\"card_number\":\"123\"," +
-        "\"expiry_month\":12," +
-        "\"expiry_year\":2035," +
-        "\"currency\":\"USD\"," +
-        "\"amount\":100," +
-        "\"cvv\":\"123\"" +
-        "}";
+    assertRejected("{"
+        + "\"card_number\":\"123\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"123\""
+        + "}");
+  }
 
-    mvc.perform(post("/payments")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(payload))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.status").value("Rejected"));
+  @Test
+  void whenExpiryMonthIsZeroThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":0,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"123\""
+        + "}");
+  }
 
-    verifyNoInteractions(bankClient);
+  @Test
+  void whenExpiryMonthIsThirteenThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":13,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"123\""
+        + "}");
+  }
+
+  @Test
+  void whenExpiryDateIsInPastThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":1,"
+        + "\"expiry_year\":2000,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"123\""
+        + "}");
+  }
+
+  @Test
+  void whenCurrencyIsUnsupportedThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"JPY\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"123\""
+        + "}");
+  }
+
+  @Test
+  void whenRequiredFieldMissingThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100"
+        + "}");
+  }
+
+  @Test
+  void whenCvvTooShortThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"12\""
+        + "}");
+  }
+
+  @Test
+  void whenCvvTooLongThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"12345\""
+        + "}");
+  }
+
+  @Test
+  void whenCvvHasNonNumericThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"12A\""
+        + "}");
+  }
+
+  @Test
+  void whenAmountIsZeroThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":0,"
+        + "\"cvv\":\"123\""
+        + "}");
+  }
+
+  @Test
+  void whenAmountIsNegativeThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"4242424242424242\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":-5,"
+        + "\"cvv\":\"123\""
+        + "}");
+  }
+
+  @Test
+  void whenCardNumberTooLongThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"42424242424242424242\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"123\""
+        + "}");
+  }
+
+  @Test
+  void whenCardNumberHasNonNumericThenRejected() throws Exception {
+    assertRejected("{"
+        + "\"card_number\":\"42424242ABC24242\","
+        + "\"expiry_month\":12,"
+        + "\"expiry_year\":2035,"
+        + "\"currency\":\"USD\","
+        + "\"amount\":100,"
+        + "\"cvv\":\"123\""
+        + "}");
   }
 
   @Test
@@ -166,5 +301,34 @@ class PaymentGatewayControllerTest {
         .andExpect(status().isBadGateway())
         .andExpect(jsonPath("$.code").value("BANK_ERROR"))
         .andExpect(jsonPath("$.message").value("Bank error"));
+  }
+
+  @Test
+  void whenMalformedJsonThenRejected() throws Exception {
+    mvc.perform(post("/payments")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value("Rejected"));
+
+    verifyNoInteractions(bankClient);
+  }
+
+  @Test
+  void whenInvalidPaymentIdThen400IsReturned() throws Exception {
+    mvc.perform(get("/payments/{id}", "not-a-uuid"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+        .andExpect(jsonPath("$.message").value("Invalid request"));
+  }
+
+  private void assertRejected(String payload) throws Exception {
+    mvc.perform(post("/payments")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value("Rejected"));
+
+    verifyNoInteractions(bankClient);
   }
 }

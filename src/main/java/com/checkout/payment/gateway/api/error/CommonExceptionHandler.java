@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -31,6 +33,20 @@ public class CommonExceptionHandler {
   public ResponseEntity<RejectedPaymentResponse> handleValidationException(Exception ex) {
     LOG.warn("Validation failed");
     return new ResponseEntity<>(new RejectedPaymentResponse("Rejected"),
+        HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<RejectedPaymentResponse> handleMalformedRequest(HttpMessageNotReadableException ex) {
+    LOG.warn("Malformed request");
+    return new ResponseEntity<>(new RejectedPaymentResponse("Rejected"),
+        HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+    LOG.warn("Invalid request parameter");
+    return new ResponseEntity<>(new ErrorResponse("INVALID_REQUEST", "Invalid request"),
         HttpStatus.BAD_REQUEST);
   }
 
