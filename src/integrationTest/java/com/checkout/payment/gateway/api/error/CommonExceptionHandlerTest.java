@@ -50,8 +50,7 @@ class CommonExceptionHandlerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(payload))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-        .andExpect(jsonPath("$.message").value("Rejected"));
+        .andExpect(jsonPath("$.status").value("Rejected"));
 
     verifyNoInteractions(bankClient);
   }

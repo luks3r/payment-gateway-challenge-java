@@ -1,6 +1,7 @@
 package com.checkout.payment.gateway.api.error;
 
 import com.checkout.payment.gateway.api.model.ErrorResponse;
+import com.checkout.payment.gateway.api.model.RejectedPaymentResponse;
 import com.checkout.payment.gateway.exception.BankClientException;
 import com.checkout.payment.gateway.exception.BankUnavailableException;
 import com.checkout.payment.gateway.exception.PaymentNotFoundException;
@@ -27,16 +28,16 @@ public class CommonExceptionHandler {
   }
 
   @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
-  public ResponseEntity<ErrorResponse> handleValidationException(Exception ex) {
+  public ResponseEntity<RejectedPaymentResponse> handleValidationException(Exception ex) {
     LOG.warn("Validation failed");
-    return new ResponseEntity<>(new ErrorResponse("VALIDATION_FAILED", "Rejected"),
+    return new ResponseEntity<>(new RejectedPaymentResponse("Rejected"),
         HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler(PaymentValidationException.class)
-  public ResponseEntity<ErrorResponse> handleDomainValidationException(PaymentValidationException ex) {
+  public ResponseEntity<RejectedPaymentResponse> handleDomainValidationException(PaymentValidationException ex) {
     LOG.warn("Domain validation failed");
-    return new ResponseEntity<>(new ErrorResponse("VALIDATION_FAILED", "Rejected"),
+    return new ResponseEntity<>(new RejectedPaymentResponse("Rejected"),
         HttpStatus.BAD_REQUEST);
   }
 

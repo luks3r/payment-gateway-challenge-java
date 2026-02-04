@@ -86,8 +86,7 @@ class PaymentGatewayE2ETest {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     JsonNode body = objectMapper.readTree(response.getBody());
-    assertThat(body.get("code").asText()).isEqualTo("VALIDATION_FAILED");
-    assertThat(body.get("message").asText()).isEqualTo("Rejected");
+    assertThat(body.get("status").asText()).isEqualTo("Rejected");
   }
 
   private ResponseEntity<String> postPayment(String cardNumber) {
