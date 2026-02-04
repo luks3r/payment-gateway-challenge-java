@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.1.5'
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+    id 'jacoco'
 }
 
 group = 'com.checkout'
@@ -9,14 +10,56 @@ version = '0.0.1-SNAPSHOT'
 
 java {
     sourceCompatibility = '17'
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 repositories {
     mavenCentral()
 }
 
+sourceSets {
+    test {
+        java {
+            srcDirs = ['src/unitTest/java']
+        }
+        resources {
+            srcDirs = ['src/unitTest/resources']
+        }
+    }
+    integrationTest {
+        java {
+            srcDirs = ['src/integrationTest/java']
+        }
+        resources {
+            srcDirs = ['src/integrationTest/resources']
+        }
+        compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+    e2eTest {
+        java {
+            srcDirs = ['src/e2eTest/java']
+        }
+        resources {
+            srcDirs = ['src/e2eTest/resources']
+        }
+        compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    e2eTestImplementation.extendsFrom testImplementation
+    e2eTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -24,4 +67,61 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+jacoco {
+    toolVersion = '0.8.10'
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Runs integration tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    useJUnitPlatform()
+}
+
+tasks.register('e2eTest', Test) {
+    description = 'Runs end-to-end tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.e2eTest.output.classesDirs
+    classpath = sourceSets.e2eTest.runtimeClasspath
+    useJUnitPlatform()
+}
+
+tasks.register('jacocoIntegrationTestReport', JacocoReport) {
+    dependsOn tasks.named('integrationTest')
+    executionData fileTree(dir: "$buildDir/jacoco", include: ["integrationTest.exec"])
+    sourceSets sourceSets.main
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+}
+
+tasks.register('jacocoE2eTestReport', JacocoReport) {
+    dependsOn tasks.named('e2eTest')
+    executionData fileTree(dir: "$buildDir/jacoco", include: ["e2eTest.exec"])
+    sourceSets sourceSets.main
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+}
+
+tasks.register('jacocoMergedReport', JacocoReport) {
+    dependsOn tasks.named('test'), tasks.named('integrationTest')
+    executionData fileTree(dir: "$buildDir/jacoco", include: ["test.exec", "integrationTest.exec", "e2eTest.exec"])
+    sourceSets sourceSets.main
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('integrationTest')
 }
