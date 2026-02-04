@@ -1,0 +1,20 @@
+package com.checkout.payment.gateway.api.validation;
+
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import jakarta.validation.Constraint;
+import jakarta.validation.Payload;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+@Target(TYPE)
+@Retention(RUNTIME)
+@Constraint(validatedBy = ValidExpiryDateValidator.class)
+public @interface ValidExpiryDate {
+  String message() default "Expiry date must be in the future";
+
+  Class<?>[] groups() default {};
+
+  Class<? extends Payload>[] payload() default {};
+}
