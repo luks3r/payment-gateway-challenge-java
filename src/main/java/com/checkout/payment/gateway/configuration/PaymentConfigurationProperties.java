@@ -9,7 +9,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "payment")
 public class PaymentConfigurationProperties {
-  @Size(min = 1, max = 3)
+  @Size(min = 1)
   private List<@Pattern(regexp = "[A-Za-z]{3}") String> supportedCurrencies =
       List.of("USD", "EUR", "GBP");
 
