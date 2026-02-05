@@ -2,8 +2,7 @@ package com.checkout.payment.gateway.api.model;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import java.util.List;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public record RejectedPaymentResponse(String status, String message, List<ValidationError> errors) {
+public record ValidationError(String field, String message) {
 }

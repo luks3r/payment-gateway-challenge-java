@@ -309,7 +309,10 @@ class PaymentGatewayControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{"))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.status").value("Rejected"));
+        .andExpect(jsonPath("$.status").value("Rejected"))
+        .andExpect(jsonPath("$.message").value("Malformed request"))
+        .andExpect(jsonPath("$.errors[0].field").value("body"))
+        .andExpect(jsonPath("$.errors[0].message").value("Malformed JSON"));
 
     verifyNoInteractions(bankClient);
   }
@@ -327,7 +330,10 @@ class PaymentGatewayControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(payload))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.status").value("Rejected"));
+        .andExpect(jsonPath("$.status").value("Rejected"))
+        .andExpect(jsonPath("$.message").value("Validation failed"))
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[0].message").exists());
 
     verifyNoInteractions(bankClient);
   }

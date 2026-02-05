@@ -1,3 +1,10 @@
 {
-  "status": "Rejected"
+  "status": "Rejected",
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "card_number",
+      "message": "must match \"\\d{14,19}\""
+    }
+  ]
 }

@@ -34,7 +34,7 @@ class CommonExceptionHandlerTest {
 
   @Test
   void domainValidationExceptionReturnsRejected() throws Exception {
-    doThrow(new PaymentValidationException("Rejected"))
+    doThrow(new PaymentValidationException("card_number", "Card number must be 14-19 digits"))
         .when(paymentRequestValidator)
         .validate(any());
     String payload = "{" +
@@ -50,7 +50,10 @@ class CommonExceptionHandlerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(payload))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.status").value("Rejected"));
+        .andExpect(jsonPath("$.status").value("Rejected"))
+        .andExpect(jsonPath("$.message").value("Validation failed"))
+        .andExpect(jsonPath("$.errors[0].field").value("card_number"))
+        .andExpect(jsonPath("$.errors[0].message").value("Card number must be 14-19 digits"));
 
     verifyNoInteractions(bankClient);
   }
